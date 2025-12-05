@@ -1,0 +1,122 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1.0">
+<script src="https://cdn.tailwindcss.com"></script>
+<style>
+  body,html{height:100%;}
+  #rooms{display:grid;grid-template-columns:repeat(auto-fit,minmax(420px,1fr));grid-auto-rows:1fr;gap:32px;}
+  .card{display:flex;flex-direction:column;min-height:380px;padding:32px !important;font-size:20px;}
+  .event{padding:18px !important;margin-bottom:14px;}
+  h2{font-size:36px !important;}
+  .estado-tag{font-size:22px !important;padding:6px 16px !important;}
+  .hora{font-size:24px !important;font-weight:bold;}
+  .titulo-evento{font-size:22px !important;font-weight:600;}
+  .campo{font-size:18px !important;color:#444;margin-top:4px;}
+  #fecha{font-size:32px !important;margin-bottom:28px;}
+</style>
+</head>
+<body class="bg-gray-100 w-full h-full m-0 p-6 flex flex-col">
+
+<p id="fecha" class="text-gray-700 font-bold text-center"></p>
+<div id="rooms" class="flex-1 w-full"></div>
+
+<script>
+  const JSON_URL = "https://gist.githubusercontent.com/EDGARSALAZ/8621de8698e6fdd6189c57aa150f9080/raw/Salones.json";
+
+  const roomsContainer = document.getElementById("rooms");
+  const fechaLabel = document.getElementById("fecha");
+
+  function formatFecha(f) {
+    const partes = f.split("-");
+    const d = new Date(partes[0], partes[1] - 1, partes[2]);
+    const dias = ["domingo","lunes","martes","miércoles","jueves","viernes","sábado"];
+    const meses = ["enero","febrero","marzo","abril","mayo","junio","julio","agosto","septiembre","octubre","noviembre","diciembre"];
+    return dias[d.getDay()] + ", " + d.getDate() + " de " + meses[d.getMonth()] + " de " + d.getFullYear();
+  }
+
+  function crearFechaHora(fechaStr, horaStr) {
+    const [anio, mes, dia] = fechaStr.split("-").map(Number);
+    const [h, m] = horaStr.split(":").map(Number);
+    return new Date(anio, mes - 1, dia, h, m, 0);
+  }
+
+  async function cargar() {
+    try {
+      const res = await fetch(JSON_URL);
+      const data = await res.json();
+
+      fechaLabel.textContent = formatFecha(data.fecha);
+      roomsContainer.innerHTML = "";
+
+      const [anio, mes, dia] = data.fecha.split("-").map(Number);
+      const ahoraReal = new Date();
+      const ahora = new Date(anio, mes - 1, dia, ahoraReal.getHours(), ahoraReal.getMinutes(), ahoraReal.getSeconds());
+
+      data.salas.forEach(salon => {
+        const eventos = salon.eventos || [];
+
+        // FILTRAR: solo eventos futuros o en progreso
+        const eventosFiltrados = eventos.filter(e => {
+          const inicio = crearFechaHora(data.fecha, e.inicio);
+          const fin = crearFechaHora(data.fecha, e.fin);
+          return ahora < fin; // si ya terminó, no mostrar
+        });
+
+        // Si no tiene eventos futuros o en progreso, igual mostramos el salón (vacío)
+        const eventosProcesados = eventosFiltrados.map(e => {
+          const inicioDate = crearFechaHora(data.fecha, e.inicio);
+          const finDate = crearFechaHora(data.fecha, e.fin);
+          const enCurso = ahora >= inicioDate && ahora < finDate;
+          const futuro = ahora < inicioDate;
+          return { ...e, enCurso, futuro };
+        });
+
+        const tieneEventoEnCurso = eventosProcesados.some(ev => ev.enCurso);
+        const ocupado = tieneEventoEnCurso;
+
+        let color = ocupado ? "border-blue-600" : "border-green-600";
+        let estado = ocupado ? "Ocupado" : "Libre";
+        let estadoColor = ocupado ? "bg-blue-600" : "bg-green-600";
+
+        let eventosHtml =
+          eventosProcesados.length === 0
+            ? `<p class="text-gray-500 italic text-xl">No hay eventos pendientes.</p>`
+            : eventosProcesados.map(e => `
+              <div class="event bg-white rounded-lg shadow border-l-4 ${e.enCurso ? "border-red-600" : "border-blue-600"}">
+                <p class="hora">
+                  ${e.inicio} - ${e.fin}
+                  ${e.enCurso ? '<span class="ml-2 text-sm font-semibold text-red-600">(En progreso)</span>' : ""}
+                </p>
+                <p class="titulo-evento">${e.titulo}</p>
+                ${e.responsable ? `<p class="campo"><strong>Responsable:</strong> ${e.responsable}</p>` : ""}
+                ${e.participantes ? `<p class="campo"><strong>Participantes:</strong> ${e.participantes}</p>` : ""}
+                ${e.observaciones ? `<p class="campo"><strong>Observaciones:</strong> ${e.observaciones}</p>` : ""}
+              </div>
+            `).join("");
+
+        roomsContainer.innerHTML += `
+          <div class="card bg-white rounded-2xl shadow-xl border-l-8 ${color}">
+            <div class="flex justify-between items-center mb-6">
+              <h2 class="font-bold text-gray-800">${salon.nombre}</h2>
+              <span class="estado-tag text-white rounded-full ${estadoColor}">${estado}</span>
+            </div>
+            <div class="flex-1 overflow-auto">
+              ${eventosHtml}
+            </div>
+          </div>
+        `;
+      });
+
+    } catch (err) {
+      console.error("Error cargando JSON:", err);
+    }
+  }
+
+  cargar();
+  setInterval(cargar, 60000);
+</script>
+
+</body>
+</html>
