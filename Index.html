@@ -4,31 +4,74 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width,initial-scale=1.0">
 <script src="https://cdn.tailwindcss.com"></script>
+
 <style>
   body,html{height:100%;}
-  #rooms{display:grid;grid-template-columns:repeat(auto-fit,minmax(420px,1fr));grid-auto-rows:1fr;gap:32px;}
-  .card{display:flex;flex-direction:column;min-height:380px;padding:32px !important;font-size:20px;}
+  #rooms{
+    display:grid;
+    grid-template-columns:repeat(auto-fit,minmax(420px,1fr));
+    grid-auto-rows:1fr;
+    gap:32px;
+  }
+  .card{
+    display:flex;
+    flex-direction:column;
+    min-height:380px;
+    padding:32px !important;
+    font-size:20px;
+  }
   .event{padding:18px !important;margin-bottom:14px;}
   h2{font-size:36px !important;}
   .estado-tag{font-size:22px !important;padding:6px 16px !important;}
   .hora{font-size:24px !important;font-weight:bold;}
   .titulo-evento{font-size:22px !important;font-weight:600;}
-  .campo{font-size:18px !important;color:#444;margin-top:4px;}
-  #fecha{font-size:32px !important;margin-bottom:28px;}
 </style>
 </head>
+
 <body class="bg-gray-100 w-full h-full m-0 p-6 flex flex-col">
 
-<p id="fecha" class="text-gray-700 font-bold text-center"></p>
+<!-- ========================================================= -->
+<!--  FILA SUPERIOR: LOGO IZQUIERDA + MAPA DERECHA             -->
+<!-- ========================================================= -->
+<div class="w-full flex justify-between items-start mb-2">
+
+  <!-- LOGO A LA IZQUIERDA -->
+  <div>
+    <img src="https://www.dropbox.com/scl/fi/pa1evz6vvcqq1ync38akw/cengica-a-2-1.png?rlkey=3a4bu71ogkws17ys58mizkq5n&st=detii6mv&dl=1" 
+         alt="Logo"
+         class="w-72">
+  </div>
+
+  <!-- MAPA A LA DERECHA -->
+  <div>
+    <img src="https://via.placeholder.com/160x110?text=Mapa" 
+         class="rounded-xl shadow w-48 h-auto object-cover">
+  </div>
+
+</div>
+
+<!-- ========================================================= -->
+<!--  SECCIÓN INFERIOR: TITULO + FECHA CENTRADOS               -->
+<!-- ========================================================= -->
+<div class="w-full flex justify-center mb-6">
+    <p id="titulo-fecha" class="text-3xl font-bold text-gray-700 text-center"></p>
+</div>
+
+<!-- CONTENEDOR DE SALONES -->
 <div id="rooms" class="flex-1 w-full"></div>
 
+<!-- ===================================================== -->
+<!-- SCRIPT PRINCIPAL                                      -->
+<!-- ===================================================== -->
+
 <script>
-  const JSON_URL = "https://gist.githubusercontent.com/EDGARSALAZ/8621de8698e6fdd6189c57aa150f9080/raw/Salones.json";
+
+  const JSON_URL =
+    "https://gist.githubusercontent.com/EDGARSALAZ/8621de8698e6fdd6189c57aa150f9080/raw/Salones.json";
 
   const roomsContainer = document.getElementById("rooms");
-  const fechaLabel = document.getElementById("fecha");
 
-  function formatFecha(f) {
+  function formatFecha(f){
     const partes = f.split("-");
     const d = new Date(partes[0], partes[1] - 1, partes[2]);
     const dias = ["domingo","lunes","martes","miércoles","jueves","viernes","sábado"];
@@ -36,41 +79,63 @@
     return dias[d.getDay()] + ", " + d.getDate() + " de " + meses[d.getMonth()] + " de " + d.getFullYear();
   }
 
-  function crearFechaHora(fechaStr, horaStr) {
-    const [anio, mes, dia] = fechaStr.split("-").map(Number);
-    const [h, m] = horaStr.split(":").map(Number);
-    return new Date(anio, mes - 1, dia, h, m, 0);
+  function crearFechaHora(fechaStr, horaStr){
+    const [anio,mes,dia]=fechaStr.split("-").map(Number);
+    const [h,m]=horaStr.split(":").map(Number);
+    return new Date(anio, mes-1, dia, h, m, 0);
   }
 
-  async function cargar() {
-    try {
+  async function cargar(){
+
+    try{
       const res = await fetch(JSON_URL);
       const data = await res.json();
 
-      fechaLabel.textContent = formatFecha(data.fecha);
+      // TITULO + FECHA (centrado debajo del header)
+      document.getElementById("titulo-fecha").textContent =
+        "Programación de salones – " + formatFecha(data.fecha);
+
       roomsContainer.innerHTML = "";
 
+      // =====================================================
+      //   LÓGICA DE TIEMPO CORREGIDA
+      // =====================================================
       const [anio, mes, dia] = data.fecha.split("-").map(Number);
-      const ahoraReal = new Date();
-      const ahora = new Date(anio, mes - 1, dia, ahoraReal.getHours(), ahoraReal.getMinutes(), ahoraReal.getSeconds());
 
+      const ahoraReal = new Date(); // Fecha/hora actual real
+      const fechaEvento = new Date(anio, mes - 1, dia);
+
+      let ahora;
+
+      // Evento futuro → mostrar TODO
+      if (fechaEvento > new Date(ahoraReal.getFullYear(), ahoraReal.getMonth(), ahoraReal.getDate())) {
+        ahora = new Date(anio, mes - 1, dia, 0, 0, 0);
+      }
+      // Evento hoy → usar hora real
+      else if (fechaEvento.toDateString() === ahoraReal.toDateString()) {
+        ahora = ahoraReal;
+      }
+      // Evento pasado → ocultar todo
+      else {
+        ahora = new Date(anio, mes - 1, dia, 23, 59, 59);
+      }
+
+      // =====================================================
+      //   PROCESAR SALONES Y EVENTOS
+      // =====================================================
       data.salas.forEach(salon => {
         const eventos = salon.eventos || [];
 
-        // FILTRAR: solo eventos futuros o en progreso
         const eventosFiltrados = eventos.filter(e => {
-          const inicio = crearFechaHora(data.fecha, e.inicio);
           const fin = crearFechaHora(data.fecha, e.fin);
-          return ahora < fin; // si ya terminó, no mostrar
+          return ahora < fin; // Solo mostrar los que no han terminado realmente
         });
 
-        // Si no tiene eventos futuros o en progreso, igual mostramos el salón (vacío)
         const eventosProcesados = eventosFiltrados.map(e => {
           const inicioDate = crearFechaHora(data.fecha, e.inicio);
           const finDate = crearFechaHora(data.fecha, e.fin);
           const enCurso = ahora >= inicioDate && ahora < finDate;
-          const futuro = ahora < inicioDate;
-          return { ...e, enCurso, futuro };
+          return { ...e, enCurso };
         });
 
         const tieneEventoEnCurso = eventosProcesados.some(ev => ev.enCurso);
@@ -85,14 +150,8 @@
             ? `<p class="text-gray-500 italic text-xl">No hay eventos pendientes.</p>`
             : eventosProcesados.map(e => `
               <div class="event bg-white rounded-lg shadow border-l-4 ${e.enCurso ? "border-red-600" : "border-blue-600"}">
-                <p class="hora">
-                  ${e.inicio} - ${e.fin}
-                  ${e.enCurso ? '<span class="ml-2 text-sm font-semibold text-red-600">(En progreso)</span>' : ""}
-                </p>
+                <p class="hora">${e.inicio} - ${e.fin}</p>
                 <p class="titulo-evento">${e.titulo}</p>
-                ${e.responsable ? `<p class="campo"><strong>Responsable:</strong> ${e.responsable}</p>` : ""}
-                ${e.participantes ? `<p class="campo"><strong>Participantes:</strong> ${e.participantes}</p>` : ""}
-                ${e.observaciones ? `<p class="campo"><strong>Observaciones:</strong> ${e.observaciones}</p>` : ""}
               </div>
             `).join("");
 
@@ -109,13 +168,15 @@
         `;
       });
 
-    } catch (err) {
+    }catch(err){
       console.error("Error cargando JSON:", err);
     }
+
   }
 
   cargar();
   setInterval(cargar, 60000);
+
 </script>
 
 </body>
