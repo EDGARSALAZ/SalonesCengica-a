@@ -6,77 +6,98 @@
 <script src="https://cdn.tailwindcss.com"></script>
 
 <style>
-  body,html{height:100%;}
-  #rooms{
-    display:grid;
-    grid-template-columns:repeat(auto-fit,minmax(420px,1fr));
-    grid-auto-rows:1fr;
-    gap:32px;
+  body, html { 
+    height: 100%; 
+    margin: 0;
+    /* Imagen de fondo relacionada a la agroindustria */
+    background: linear-gradient(rgba(0, 0, 0, 0.4), rgba(0, 0, 0, 0.4)), 
+                url('https://www.dropbox.com/scl/fi/smf9u5kmpbqaqeklkexdh/Fotografia-CG.png?rlkey=vbiip47tnqvgrwgjiuipo5ehw&st=g57rzy8l&dl=1') no-repeat center center fixed;
+    background-size: cover;
   }
-  .card{
-    display:flex;
-    flex-direction:column;
-    min-height:380px;
-    padding:32px !important;
-    font-size:20px;
+
+  #rooms {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(420px, 1fr));
+    grid-auto-rows: 1fr;
+    gap: 24px;
   }
-  .event{padding:18px !important;margin-bottom:14px;}
-  h2{font-size:36px !important;}
-  .estado-tag{font-size:22px !important;padding:6px 16px !important;}
-  .hora{font-size:24px !important;font-weight:bold;}
-  .titulo-evento{font-size:22px !important;font-weight:600;}
+
+  .card {
+    display: flex;
+    flex-direction: column;
+    min-height: 350px;
+    padding: 24px !important;
+    font-size: 20px;
+    background: rgba(255, 255, 255, 0.95); /* Blanco ligeramente traslúcido */
+    backdrop-filter: blur(5px);
+  }
+
+  .banner-header {
+    background: rgba(255, 255, 255, 0.9);
+    backdrop-filter: blur(10px);
+    border-bottom: 3px solid #16a34a; /* Verde CENGICAÑA */
+  }
+
+  .event { padding: 14px !important; margin-bottom: 12px; }
+  h2 { font-size: 32px !important; }
+  .estado-tag { font-size: 18px !important; padding: 4px 14px !important; }
+  .hora { font-size: 22px !important; font-weight: bold; }
+  .titulo-evento { font-size: 20px !important; font-weight: 600; }
+
+  /* Estilo del Reloj */
+  #clock {
+    font-family: monospace;
+    font-size: 48px;
+    font-weight: bold;
+    color: #1a1a1a;
+    line-height: 1;
+  }
 </style>
 </head>
 
-<body class="bg-gray-100 w-full h-full m-0 p-6 flex flex-col">
+<body class="w-full h-full flex flex-col">
 
-<!-- ========================================================= -->
-<!--  FILA SUPERIOR: LOGO IZQUIERDA + MAPA DERECHA             -->
-<!-- ========================================================= -->
-<div class="w-full flex justify-between items-start mb-2">
-
-  <!-- LOGO A LA IZQUIERDA -->
+<header class="banner-header w-full px-8 py-4 flex justify-between items-center shadow-lg">
   <div>
     <img src="https://www.dropbox.com/scl/fi/pa1evz6vvcqq1ync38akw/cengica-a-2-1.png?rlkey=3a4bu71ogkws17ys58mizkq5n&st=detii6mv&dl=1" 
-         alt="Logo"
-         class="w-72">
+         alt="Logo CENGICAÑA"
+         class="w-64">
   </div>
 
-  <!-- MAPA A LA DERECHA -->
-  <div>
-    <img src="https://via.placeholder.com/160x110?text=Mapa" 
-         class="rounded-xl shadow w-48 h-auto object-cover">
+  <div class="text-center">
+    <h1 id="titulo-fecha" class="text-2xl font-bold text-gray-800 uppercase tracking-wide"></h1>
   </div>
 
-</div>
+  <div class="text-right">
+    <div id="clock">00:00:00</div>
+    <div class="text-gray-600 font-semibold uppercase text-sm">Hora Actual</div>
+  </div>
+</header>
 
-<!-- ========================================================= -->
-<!--  SECCIÓN INFERIOR: TITULO + FECHA CENTRADOS               -->
-<!-- ========================================================= -->
-<div class="w-full flex justify-center mb-6">
-    <p id="titulo-fecha" class="text-3xl font-bold text-gray-700 text-center"></p>
-</div>
-
-<!-- CONTENEDOR DE SALONES -->
-<div id="rooms" class="flex-1 w-full"></div>
-
-<!-- ===================================================== -->
-<!-- SCRIPT PRINCIPAL                                      -->
-<!-- ===================================================== -->
+<main class="flex-1 w-full p-8 overflow-auto">
+  <div id="rooms"></div>
+</main>
 
 <script>
+  const JSON_URL = "https://gist.githubusercontent.com/EDGARSALAZ/8621de8698e6fdd6189c57aa150f9080/raw/Salones.json";
 
-  const JSON_URL =
-    "https://gist.githubusercontent.com/EDGARSALAZ/8621de8698e6fdd6189c57aa150f9080/raw/Salones.json";
-
-  const roomsContainer = document.getElementById("rooms");
+  // --- FUNCIÓN DEL RELOJ EN TIEMPO REAL ---
+  function updateClock() {
+    const now = new Date();
+    const hours = String(now.getHours()).padStart(2, '0');
+    const minutes = String(now.getMinutes()).padStart(2, '0');
+    const seconds = String(now.getSeconds()).padStart(2, '0');
+    document.getElementById('clock').textContent = `${hours}:${minutes}:${seconds}`;
+  }
+  setInterval(updateClock, 1000);
+  updateClock();
 
   function formatFecha(f){
     const partes = f.split("-");
     const d = new Date(partes[0], partes[1] - 1, partes[2]);
     const dias = ["domingo","lunes","martes","miércoles","jueves","viernes","sábado"];
     const meses = ["enero","febrero","marzo","abril","mayo","junio","julio","agosto","septiembre","octubre","noviembre","diciembre"];
-    return dias[d.getDay()] + ", " + d.getDate() + " de " + meses[d.getMonth()] + " de " + d.getFullYear();
+    return dias[d.getDay()] + ", " + d.getDate() + " de " + meses[d.getMonth()];
   }
 
   function crearFechaHora(fechaStr, horaStr){
@@ -86,50 +107,30 @@
   }
 
   async function cargar(){
-
     try{
       const res = await fetch(JSON_URL);
       const data = await res.json();
+      const roomsContainer = document.getElementById("rooms");
 
-      // TITULO + FECHA (centrado debajo del header)
-      document.getElementById("titulo-fecha").textContent =
-        "Programación de salones – " + formatFecha(data.fecha);
-
+      document.getElementById("titulo-fecha").textContent = "Programación: " + formatFecha(data.fecha);
       roomsContainer.innerHTML = "";
 
-      // =====================================================
-      //   LÓGICA DE TIEMPO CORREGIDA
-      // =====================================================
       const [anio, mes, dia] = data.fecha.split("-").map(Number);
-
-      const ahoraReal = new Date(); // Fecha/hora actual real
+      const ahoraReal = new Date();
       const fechaEvento = new Date(anio, mes - 1, dia);
 
       let ahora;
-
-      // Evento futuro → mostrar TODO
       if (fechaEvento > new Date(ahoraReal.getFullYear(), ahoraReal.getMonth(), ahoraReal.getDate())) {
         ahora = new Date(anio, mes - 1, dia, 0, 0, 0);
-      }
-      // Evento hoy → usar hora real
-      else if (fechaEvento.toDateString() === ahoraReal.toDateString()) {
+      } else if (fechaEvento.toDateString() === ahoraReal.toDateString()) {
         ahora = ahoraReal;
-      }
-      // Evento pasado → ocultar todo
-      else {
+      } else {
         ahora = new Date(anio, mes - 1, dia, 23, 59, 59);
       }
 
-      // =====================================================
-      //   PROCESAR SALONES Y EVENTOS
-      // =====================================================
       data.salas.forEach(salon => {
         const eventos = salon.eventos || [];
-
-        const eventosFiltrados = eventos.filter(e => {
-          const fin = crearFechaHora(data.fecha, e.fin);
-          return ahora < fin; // Solo mostrar los que no han terminado realmente
-        });
+        const eventosFiltrados = eventos.filter(e => ahora < crearFechaHora(data.fecha, e.fin));
 
         const eventosProcesados = eventosFiltrados.map(e => {
           const inicioDate = crearFechaHora(data.fecha, e.inicio);
@@ -138,28 +139,25 @@
           return { ...e, enCurso };
         });
 
-        const tieneEventoEnCurso = eventosProcesados.some(ev => ev.enCurso);
-        const ocupado = tieneEventoEnCurso;
-
+        const ocupado = eventosProcesados.some(ev => ev.enCurso);
         let color = ocupado ? "border-blue-600" : "border-green-600";
         let estado = ocupado ? "Ocupado" : "Libre";
         let estadoColor = ocupado ? "bg-blue-600" : "bg-green-600";
 
-        let eventosHtml =
-          eventosProcesados.length === 0
-            ? `<p class="text-gray-500 italic text-xl">No hay eventos pendientes.</p>`
+        let eventosHtml = eventosProcesados.length === 0
+            ? `<p class="text-gray-400 italic text-lg mt-4">Sin eventos pendientes.</p>`
             : eventosProcesados.map(e => `
-              <div class="event bg-white rounded-lg shadow border-l-4 ${e.enCurso ? "border-red-600" : "border-blue-600"}">
-                <p class="hora">${e.inicio} - ${e.fin}</p>
-                <p class="titulo-evento">${e.titulo}</p>
+              <div class="event bg-white rounded-lg shadow-sm border-l-4 ${e.enCurso ? "border-red-500 animate-pulse" : "border-blue-500"}">
+                <p class="hora text-gray-700">${e.inicio} - ${e.fin}</p>
+                <p class="titulo-evento text-gray-900">${e.titulo}</p>
               </div>
             `).join("");
 
         roomsContainer.innerHTML += `
-          <div class="card bg-white rounded-2xl shadow-xl border-l-8 ${color}">
-            <div class="flex justify-between items-center mb-6">
-              <h2 class="font-bold text-gray-800">${salon.nombre}</h2>
-              <span class="estado-tag text-white rounded-full ${estadoColor}">${estado}</span>
+          <div class="card rounded-2xl shadow-2xl border-t-4 ${color}">
+            <div class="flex justify-between items-start mb-4">
+              <h2 class="font-extrabold text-gray-800 leading-tight">${salon.nombre}</h2>
+              <span class="estado-tag text-white font-bold rounded-lg shadow-md ${estadoColor}">${estado}</span>
             </div>
             <div class="flex-1 overflow-auto">
               ${eventosHtml}
@@ -168,15 +166,11 @@
         `;
       });
 
-    }catch(err){
-      console.error("Error cargando JSON:", err);
-    }
-
+    } catch(err){ console.error("Error:", err); }
   }
 
   cargar();
-  setInterval(cargar, 60000);
-
+  setInterval(cargar, 60000); // Recarga datos cada minuto
 </script>
 
 </body>
